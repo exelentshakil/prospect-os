@@ -5,7 +5,7 @@ competitive analysis, leakage detection, deterministic scoring, multi-touch
 outreach, CRM sync and call booking — with a traced, auditable step record for
 every run.
 
-**Live demo:** https://prospect-os.vercel.app · **Rubric:** `/rubric` ·
+**Live demo:** https://prospect-os-tau.vercel.app · **Rubric:** `/rubric` ·
 **Health:** `/api/health`
 
 ## The one architectural decision

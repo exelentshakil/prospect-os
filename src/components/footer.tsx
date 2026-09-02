@@ -38,7 +38,7 @@ const DECISIONS = [
 
 const COVER_LETTER = `you said it yourself: not a chatbot. the fear is an agent that writes confident emails nobody can defend on the call.
 
-live: https://prospect-os.vercel.app
+live: https://prospect-os-tau.vercel.app
 code: https://github.com/exelentshakil/prospect-os
 portfolio: https://shakilhq.com
 
