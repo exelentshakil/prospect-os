@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f6f7f9;
+  --bg-grad: radial-gradient(1200px 600px at 15% -10%, #e8ebff 0%, transparent 55%),
+    radial-gradient(900px 500px at 95% 0%, #e6f7f1 0%, transparent 50%);
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-solid: #ffffff;
+  --surface-2: #f1f3f7;
+  --border: #e2e6ee;
+  --border-strong: #cfd5e2;
+  --text: #0c1018;
+  --muted: #5a6474;
+  --faint: #8b95a6;
+  --accent: #4f46e5;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --good: #0f9d76;
+  --good-soft: rgba(15, 157, 118, 0.12);
+  --warn: #c2760a;
+  --warn-soft: rgba(194, 118, 10, 0.12);
+  --bad: #d4364f;
+  --bad-soft: rgba(212, 54, 79, 0.1);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -12px rgba(16, 24, 40, 0.14);
+}
+
+.dark {
+  --bg: #07090e;
+  --bg-grad: radial-gradient(1200px 600px at 12% -10%, rgba(79, 70, 229, 0.16) 0%, transparent 55%),
+    radial-gradient(900px 500px at 95% 0%, rgba(15, 157, 118, 0.12) 0%, transparent 50%);
+  --surface: rgba(19, 23, 32, 0.72);
+  --surface-solid: #12161f;
+  --surface-2: #171c26;
+  --border: #232a37;
+  --border-strong: #333c4d;
+  --text: #eef1f6;
+  --muted: #98a2b3;
+  --faint: #6b7688;
+  --accent: #8b83ff;
+  --accent-soft: rgba(139, 131, 255, 0.14);
+  --good: #34d3a3;
+  --good-soft: rgba(52, 211, 163, 0.14);
+  --warn: #e5a13a;
+  --warn-soft: rgba(229, 161, 58, 0.14);
+  --bad: #ff6b81;
+  --bad-soft: rgba(255, 107, 129, 0.14);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+body {
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.hairline {
+  border-color: var(--border);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 0.35s ease-out both;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+*::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
