@@ -1,3 +1,4 @@
+import { hash } from "./rand";
 import type { Company, IcpProfile } from "./types";
 
 export const DEFAULT_ICP: IcpProfile = {
@@ -44,11 +45,12 @@ const FIRST = ["Marc", "Sophie", "Daniel", "Claire", "Andre", "Nadia", "Peter", 
 const LAST = ["Tremblay", "Gagnon", "Lavoie", "Roy", "Bergeron", "Whitfield", "Osei", "Kaplan", "Marchand", "Nguyen", "Doyle", "Fortin"];
 
 export function inferContact(company: Company, icp: IcpProfile) {
-  const seed = company.domain;
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  // `>>>` throughout: `>>` is a signed shift, so any hash at or above 2^31
+  // shifts to a negative number, and a negative modulus indexes off the front
+  // of the array and yields undefined.
+  const h = hash(company.domain);
   const first = FIRST[h % FIRST.length];
-  const last = LAST[(h >> 4) % LAST.length];
+  const last = LAST[(h >>> 4) % LAST.length];
   const title = company.employees > 150 ? icp.persona.titles[1] : icp.persona.titles[0];
   const confidence = company.techSignals.some((t) => /HubSpot|Salesforce|Marketo|Pardot/.test(t))
     ? 0.93
