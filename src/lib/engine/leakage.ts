@@ -49,7 +49,7 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
     detectors.push({
       code: "slow_lcp",
       label: "Largest Contentful Paint over threshold",
-      lossPct: Math.min(secondsOver * 0.07, 0.22),
+      lossPct: Math.min(secondsOver * 0.07, 0.15),
       evidence: `LCP ${seo.lcpSeconds}s · mobile score ${seo.mobileScore}/100 · CWV ${seo.cwvPass ? "pass" : "fail"}`,
       reason: `LCP ${seo.lcpSeconds}s is ${secondsOver}s over the 2.5s threshold × 7% conversion loss per second`,
     });
@@ -61,7 +61,7 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
     detectors.push({
       code: "form_friction",
       label: "Lead form asks for more than it needs",
-      lossPct: Math.min(extra * 0.04, 0.15),
+      lossPct: Math.min(extra * 0.04, 0.1),
       evidence: `${formFields}-field contact form, no progressive disclosure`,
       reason: `${formFields} required fields, ${extra} over the 6-field break-even × 4% abandonment per extra field`,
     });
@@ -72,9 +72,9 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
     detectors.push({
       code: "slow_lead_response",
       label: "No routing layer between form fill and follow-up",
-      lossPct: 0.09,
+      lossPct: 0.07,
       evidence: `stack shows ${company.techSignals.join(", ")} with no CRM`,
-      reason: `no CRM detected, median first response beyond 60 min, 9% of qualified inbound decays before contact`,
+      reason: `no CRM detected, median first response beyond 60 min, 7% of qualified inbound decays before contact`,
     });
   }
 
@@ -138,9 +138,9 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
 
   if (a.trajectoryDelta < 0) {
     // Visibility is not linear in traffic, so the recovery implied by a fall
-    // from v0 to v11 is dampened and then capped at 35% of current sessions.
+    // from v0 to v11 is dampened and then capped at 20% of current sessions.
     const ratio = a.trajectory[0] / Math.max(a.trajectory[11], 1);
-    const upliftShare = Math.min(Math.sqrt(ratio) - 1, 0.35);
+    const upliftShare = Math.min(Math.sqrt(ratio) - 1, 0.2);
     const sessionsLost = Math.round(sessions * upliftShare);
     aggregate = Math.round(sessionsLost * perSession);
     competitorFindings.push({
@@ -156,7 +156,7 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
   }
 
   const rawClicksLost = a.weakPositions.reduce((sum, w) => sum + w.clicksLost, 0);
-  const clicksLost = Math.min(rawClicksLost, Math.round(sessions * 0.25));
+  const clicksLost = Math.min(rawClicksLost, Math.round(sessions * 0.15));
   if (clicksLost > 0) {
     const dollars = Math.round(clicksLost * perSession);
     itemised += dollars;
@@ -166,7 +166,7 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
       label: "Top clusters owned by a named competitor",
       severity: severity(dollars),
       monthlyDollars: dollars,
-      basis: `${clicksLost.toLocaleString()} clicks/mo lost across ${a.weakPositions.length} clusters where a competitor holds page one${rawClicksLost > clicksLost ? ` (capped at 25% of current sessions from ${rawClicksLost.toLocaleString()})` : ""} × $${perSession.toFixed(2)} per session = $${dollars.toLocaleString()}/mo`,
+      basis: `${clicksLost.toLocaleString()} clicks/mo lost across ${a.weakPositions.length} clusters where a competitor holds page one${rawClicksLost > clicksLost ? ` (capped at 15% of current sessions from ${rawClicksLost.toLocaleString()})` : ""} × $${perSession.toFixed(2)} per session = $${dollars.toLocaleString()}/mo`,
       evidence: `worst: "${a.weakPositions[0].cluster}" — they sit ${a.weakPositions[0].prospectPosition}, ${a.weakPositions[0].bestCompetitor} sits ${a.weakPositions[0].competitorPosition}`,
       counted: true,
     });
@@ -175,7 +175,7 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
   const brandedVolume = Math.round(between(company.domain + ":brand", 140, 2600));
   const bleedPct = between(company.domain + ":bleed", 0.04, 0.19, 2);
   if (bleedPct > 0.06) {
-    const diverted = Math.min(Math.round(brandedVolume * bleedPct), Math.round(sessions * 0.08));
+    const diverted = Math.min(Math.round(brandedVolume * bleedPct), Math.round(sessions * 0.05));
     const dollars = Math.round(diverted * perSession * 1.6);
     itemised += dollars;
     competitorFindings.push({
