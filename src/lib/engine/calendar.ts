@@ -44,20 +44,24 @@ export function slots(from = new Date()): Slot[] {
 
 export async function book(booking: Booking): Promise<Booking> {
   bookings.unshift(booking);
-  const db = supabase();
-  if (db) {
-    const { error } = await db.from("calls").insert({
-      domain: booking.domain,
-      company: booking.company,
-      contact: booking.contact,
-      slot_start: booking.slot,
-      agenda: booking.agenda,
-      created_at: booking.createdAt,
-    });
-    if (error && !isMissingTable(error)) {
-      // A live-table error is worth surfacing in logs, never to the visitor.
-      console.error("calls insert failed", error.message);
+  try {
+    const db = supabase();
+    if (db) {
+      const { error } = await db.from("calls").insert({
+        domain: booking.domain,
+        company: booking.company,
+        contact: booking.contact,
+        slot_start: booking.slot,
+        agenda: booking.agenda,
+        created_at: booking.createdAt,
+      });
+      if (error && !isMissingTable(error)) {
+        // A live-table error is worth surfacing in logs, never to the visitor.
+        console.error("calls insert failed", error.message);
+      }
     }
+  } catch (err) {
+    console.error("calls insert threw", err instanceof Error ? err.message : err);
   }
   return booking;
 }

@@ -46,23 +46,30 @@ class DemoCrmAdapter implements CrmAdapter {
   name = "demo-crm";
   live = true;
 
+  // Persistence is best-effort by design: the in-memory store is the source of
+  // truth for a demo run, so no database problem — missing table, bad
+  // credentials, network failure — is allowed to fail the pipeline.
   private async persist(record: CrmRecord) {
-    const db = supabase();
-    if (!db) return;
-    const { error } = await db.from("crm_records").upsert(
-      {
-        domain: record.domain,
-        company: record.company,
-        stage: record.stage,
-        score: record.score,
-        tier: record.tier,
-        owner: record.owner,
-        updated_at: record.updatedAt,
-      },
-      { onConflict: "domain" }
-    );
-    if (error && !isMissingTable(error)) {
-      console.error("crm_records upsert failed", error.message);
+    try {
+      const db = supabase();
+      if (!db) return;
+      const { error } = await db.from("crm_records").upsert(
+        {
+          domain: record.domain,
+          company: record.company,
+          stage: record.stage,
+          score: record.score,
+          tier: record.tier,
+          owner: record.owner,
+          updated_at: record.updatedAt,
+        },
+        { onConflict: "domain" }
+      );
+      if (error && !isMissingTable(error)) {
+        console.error("crm_records upsert failed", error.message);
+      }
+    } catch (err) {
+      console.error("crm_records upsert threw", err instanceof Error ? err.message : err);
     }
   }
 
@@ -92,14 +99,21 @@ class DemoCrmAdapter implements CrmAdapter {
   async logActivity(activity: CrmActivity) {
     state.activity.unshift(activity);
     if (state.activity.length > 400) state.activity.pop();
-    const db = supabase();
-    if (!db) return;
-    await db.from("crm_activity").insert({
-      domain: activity.domain,
-      verb: activity.verb,
-      detail: activity.detail,
-      created_at: activity.at,
-    });
+    try {
+      const db = supabase();
+      if (!db) return;
+      const { error } = await db.from("crm_activity").insert({
+        domain: activity.domain,
+        verb: activity.verb,
+        detail: activity.detail,
+        created_at: activity.at,
+      });
+      if (error && !isMissingTable(error)) {
+        console.error("crm_activity insert failed", error.message);
+      }
+    } catch (err) {
+      console.error("crm_activity insert threw", err instanceof Error ? err.message : err);
+    }
   }
 
   async findByDomain(domain: string) {

@@ -66,26 +66,46 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
   const t0 = Date.now();
   const trace: TraceStep[] = [];
 
+  // One agent failing degrades the run, it does not end it. The step records
+  // status "error" with the message, falls back, and the pipeline continues —
+  // a partial result with a visible failure in the trace beats a 500.
   const step = async <T>(
     agent: string,
     role: string,
     mode: TraceStep["mode"],
     input: string,
-    fn: () => Promise<{ value: T; output: string }> | { value: T; output: string }
+    fn: () => Promise<{ value: T; output: string }> | { value: T; output: string },
+    fallback: T
   ): Promise<T> => {
     const started = Date.now();
-    const { value, output } = await fn();
-    trace.push({
-      index: trace.length + 1,
-      agent,
-      role,
-      mode,
-      status: "ok",
-      durationMs: Date.now() - started,
-      input,
-      output,
-    });
-    return value;
+    try {
+      const { value, output } = await fn();
+      trace.push({
+        index: trace.length + 1,
+        agent,
+        role,
+        mode,
+        status: "ok",
+        durationMs: Date.now() - started,
+        input,
+        output,
+      });
+      return value;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`${agent} failed`, message);
+      trace.push({
+        index: trace.length + 1,
+        agent,
+        role,
+        mode,
+        status: "error",
+        durationMs: Date.now() - started,
+        input,
+        output: `failed: ${message}`,
+      });
+      return fallback;
+    }
   };
 
   // 1 — sourcing
@@ -100,7 +120,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         value: matched,
         output: `${matched.length} candidates passed ICP filter, ${UNIVERSE.length - matched.length} rejected`,
       };
-    }
+    },
+    []
   );
 
   // 2 — research
@@ -127,7 +148,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
       const triggers = candidates.flatMap((c) => c.signals).filter((s) => /hiring|spend|redesign|expansion|acquired/i.test(s));
       const text = `${candidates.length} companies across ${industries.length} verticals (${industries.slice(0, 3).join(", ")}) cleared the ICP filter. ${triggers.length} carry an active buying trigger, most commonly hiring or a spend change, which is the timing pillar doing most of the work in the score. The strongest lead-in for this cohort is the named-competitor gap rather than a generic audit offer.`;
       return { value: text, output: "deterministic fallback — no GEMINI_API_KEY configured" };
-    }
+    },
+    ""
   );
 
   // 3 — competitive analysis
@@ -143,7 +165,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         value,
         output: `${value.length} analysed · ${declining} declining on 12-month trajectory · ${value.reduce((s, a) => s + a.competitors.length, 0)} competitors mapped`,
       };
-    }
+    },
+    []
   );
 
   // 4 — leakage
@@ -159,7 +182,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         value,
         output: `${value.reduce((s, l) => s + l.findings.length, 0)} findings · $${total.toLocaleString()}/mo aggregate leakage detected`,
       };
-    }
+    },
+    []
   );
 
   // 5 — scoring
@@ -188,7 +212,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         value,
         output: `${qualified} qualified at threshold ${icp.minScore} · ${value.length - qualified} parked · top score ${value[0]?.score.score ?? 0}`,
       };
-    }
+    },
+    []
   );
 
   const qualified = prospects.filter((p) => p.score.qualified);
@@ -206,7 +231,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         value: null,
         output: `${named} prospects lead with a named competitor, ${angles.length - named} lead with a conversion leak`,
       };
-    }
+    },
+    null
   );
 
   // 7 — copy
@@ -222,7 +248,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         value: null,
         output: `${qualified.length * 5} touches drafted from locked fact sheets · model rewrite available per prospect`,
       };
-    }
+    },
+    null
   );
 
   // 8 — CRM
@@ -251,7 +278,8 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         });
       }
       return { value: prospects.length, output: `${prospects.length} records upserted to ${adapter.name} · ${prospects.length} activities logged` };
-    }
+    },
+    0
   );
 
   const result: RunResult = {

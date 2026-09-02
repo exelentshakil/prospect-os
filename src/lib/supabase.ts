@@ -8,11 +8,19 @@ let client: SupabaseClient | null = null;
 
 export function supabase(): SupabaseClient | null {
   if (client) return client;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) return null;
-  client = createClient(url, key, { auth: { persistSession: false } });
-  return client;
+  // createClient throws synchronously on a malformed URL (a pasted Postgres
+  // connection string, a stray newline). Persistence is a nicety here, so a
+  // bad value must degrade to in-memory rather than take down a pipeline run.
+  try {
+    client = createClient(url, key, { auth: { persistSession: false } });
+    return client;
+  } catch (err) {
+    console.error("supabase client init failed", err instanceof Error ? err.message : err);
+    return null;
+  }
 }
 
 export function supabaseConfigured(): boolean {

@@ -11,12 +11,19 @@ export async function POST(request: Request) {
   } catch {
     body = {};
   }
-  const result = await runPipeline({
-    ...(body.industries?.length ? { industries: body.industries } : {}),
-    ...(body.regions?.length ? { regions: body.regions } : {}),
-    ...(typeof body.employeeMin === "number" ? { employeeMin: body.employeeMin } : {}),
-    ...(typeof body.employeeMax === "number" ? { employeeMax: body.employeeMax } : {}),
-    ...(typeof body.minScore === "number" ? { minScore: body.minScore } : {}),
-  });
-  return NextResponse.json(result);
+  try {
+    const result = await runPipeline({
+      ...(body.industries?.length ? { industries: body.industries } : {}),
+      ...(body.regions?.length ? { regions: body.regions } : {}),
+      ...(typeof body.employeeMin === "number" ? { employeeMin: body.employeeMin } : {}),
+      ...(typeof body.employeeMax === "number" ? { employeeMax: body.employeeMax } : {}),
+      ...(typeof body.minScore === "number" ? { minScore: body.minScore } : {}),
+    });
+    return NextResponse.json(result);
+  } catch (err) {
+    // An empty 500 is useless to whoever is looking at the network tab.
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("pipeline run failed", message, err instanceof Error ? err.stack : "");
+    return NextResponse.json({ error: "pipeline run failed", message }, { status: 500 });
+  }
 }
