@@ -155,7 +155,10 @@ export async function runPipeline(
         };
       }
 
-      if (aiConfigured()) {
+      // Serverless runs many instances, so the cache above is per-instance and
+      // a cold one would otherwise fall through to a live call on a mere page
+      // load. Only an explicit run is allowed to reach the model.
+      if (forceFresh && aiConfigured()) {
         const res = await generate(
           `You are the research step of an outbound agent for a digital marketing agency. In 3 sentences, describe the pattern across these prospects and which trigger is most worth leading with. No preamble, no bullet points, no invented numbers.\n\n${brief}`,
           400
@@ -168,7 +171,12 @@ export async function runPipeline(
       const industries = Array.from(new Set(candidates.map((c) => c.industry)));
       const triggers = candidates.flatMap((c) => c.signals).filter((s) => /hiring|spend|redesign|expansion|acquired/i.test(s));
       const text = `${candidates.length} companies across ${industries.length} verticals (${industries.slice(0, 3).join(", ")}) cleared the ICP filter. ${triggers.length} carry an active buying trigger, most commonly hiring or a spend change, which is the timing pillar doing most of the work in the score. The strongest lead-in for this cohort is the named-competitor gap rather than a generic audit offer.`;
-      return { value: text, output: "deterministic fallback — no GEMINI_API_KEY configured" };
+      return {
+        value: text,
+        output: aiConfigured()
+          ? "deterministic — page load, no API call. Click Run the agent for the model write-up"
+          : "deterministic fallback — no GEMINI_API_KEY configured",
+      };
     },
     ""
   );
