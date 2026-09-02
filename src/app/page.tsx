@@ -64,14 +64,17 @@ export default function Home() {
   const [minScore, setMinScore] = useState(62);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const run = useCallback(() => {
+  // `fresh` is false on the auto-run at mount so a page load never bills a
+  // model call, and true when someone actually clicks Run the agent.
+  const run = useCallback(
+    (fresh = false) => {
     setRunning(true);
     setRevealed(0);
     setResult(null);
     fetch("/api/pipeline/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ industries, minScore }),
+      body: JSON.stringify({ industries, minScore, fresh }),
     })
       .then((r) => r.json())
       .then((data: RunResult) => {
@@ -89,10 +92,12 @@ export default function Home() {
         }, 170);
       })
       .catch(() => setRunning(false));
-  }, [industries, minScore]);
+    },
+    [industries, minScore]
+  );
 
   useEffect(() => {
-    run();
+    run(false);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
@@ -168,7 +173,7 @@ export default function Home() {
           </div>
           <button
             type="button"
-            onClick={run}
+            onClick={() => run(true)}
             disabled={running}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >

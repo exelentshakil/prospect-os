@@ -59,7 +59,17 @@ export async function sequenceFor(domain: string, useAi: boolean): Promise<Seque
   return generateSequence(p.company, p.analysis, p.leakage, p.contact, useAi);
 }
 
-export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 12): Promise<RunResult> {
+// The market read is the only per-run model call, and the dashboard auto-runs
+// on mount — so without a cache every page load and every refresh bills a
+// Gemini request. Cached by ICP, refreshed on an explicit run.
+const MARKET_READ_TTL_MS = 15 * 60 * 1000;
+const marketReadCache = new Map<string, { text: string; model: string; at: number }>();
+
+export async function runPipeline(
+  overrides: Partial<IcpProfile> = {},
+  limit = 12,
+  forceFresh = false
+): Promise<RunResult> {
   const icp: IcpProfile = { ...DEFAULT_ICP, ...overrides, persona: DEFAULT_ICP.persona };
   const runId = `run_${Date.now().toString(36)}`;
   const startedAt = new Date().toISOString();
@@ -135,13 +145,24 @@ export async function runPipeline(overrides: Partial<IcpProfile> = {}, limit = 1
         .slice(0, 6)
         .map((c) => `${c.name} (${c.subvertical}, ${c.employees} staff, ${c.city}): ${c.signals.join("; ")}`)
         .join("\n");
+
+      const cacheKey = `${icp.industries.join(",")}|${icp.minScore}|${candidates.length}`;
+      const cached = marketReadCache.get(cacheKey);
+      if (!forceFresh && cached && Date.now() - cached.at < MARKET_READ_TTL_MS) {
+        return {
+          value: cached.text,
+          output: `cached · ${cached.model} · ${Math.round((Date.now() - cached.at) / 1000)}s old, no API call`,
+        };
+      }
+
       if (aiConfigured()) {
         const res = await generate(
           `You are the research step of an outbound agent for a digital marketing agency. In 3 sentences, describe the pattern across these prospects and which trigger is most worth leading with. No preamble, no bullet points, no invented numbers.\n\n${brief}`,
           400
         );
         if (res) {
-          return { value: res.text, output: `${res.model} · ${res.text.length} chars` };
+          marketReadCache.set(cacheKey, { text: res.text, model: res.model, at: Date.now() });
+          return { value: res.text, output: `${res.model} · ${res.text.length} chars · live call` };
         }
       }
       const industries = Array.from(new Set(candidates.map((c) => c.industry)));
