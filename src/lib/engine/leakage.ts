@@ -15,7 +15,11 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
   const findings: LeakageFinding[] = [];
   const { seo, revenue } = a;
   const dealValue = revenue.avgDealValue;
-  const cvr = revenue.conversionRate / 100;
+  const closeRate = revenue.closeRate;
+  // One session is worth lead rate × close rate × deal value. Every
+  // traffic-based finding prices its clicks through this single number, so the
+  // estimates stay consistent with the attribution figure above them.
+  const perSession = revenue.revenuePerSession;
 
   // ---- conversion leakage -------------------------------------------------
 
@@ -54,14 +58,14 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
   const phoneLed = ["Home Services", "Legal", "Healthcare", "Financial Services", "Real Estate"].includes(company.industry);
   if (phoneLed && !hasCallTracking) {
     const calls = Math.round(revenue.organicSessions * 0.031);
-    const dollars = Math.round(calls * 0.22 * cvr * dealValue);
+    const dollars = Math.round(calls * 0.22 * closeRate * dealValue);
     findings.push({
       kind: "conversion",
       code: "untracked_calls",
       label: "Phone demand is unattributed",
       severity: severity(dollars),
       monthlyDollars: dollars,
-      basis: `~${calls} organic calls/mo, no call tracking installed. 22% land outside business hours or unrouted × ${revenue.conversionRate}% × $${dealValue.toLocaleString()} = $${dollars.toLocaleString()}/mo`,
+      basis: `~${calls} organic calls/mo, no call tracking installed. 22% land outside business hours or unrouted × ${(closeRate * 100).toFixed(0)}% close × $${dealValue.toLocaleString()} = $${dollars.toLocaleString()}/mo`,
       evidence: `no call-tracking tag detected in ${company.techSignals.join(", ")}`,
     });
   }
@@ -69,14 +73,14 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
   if (seo.schemaCoverage < 40) {
     const uplift = 0.08;
     const extraSessions = Math.round(revenue.organicSessions * uplift);
-    const dollars = Math.round(extraSessions * cvr * dealValue);
+    const dollars = Math.round(extraSessions * perSession);
     findings.push({
       kind: "conversion",
       code: "missing_schema",
       label: "Structured data missing on money pages",
       severity: severity(dollars),
       monthlyDollars: dollars,
-      basis: `schema coverage ${seo.schemaCoverage}% × 8% median CTR uplift from rich results × ${revenue.organicSessions.toLocaleString()} sessions × ${revenue.conversionRate}% × $${dealValue.toLocaleString()} = $${dollars.toLocaleString()}/mo`,
+      basis: `schema coverage ${seo.schemaCoverage}% × 8% median CTR uplift from rich results = ${extraSessions.toLocaleString()} sessions/mo × $${perSession.toFixed(2)} per session = $${dollars.toLocaleString()}/mo`,
       evidence: `${seo.schemaCoverage}% of indexed templates carry valid schema`,
     });
   }
@@ -101,29 +105,30 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
 
   if (a.trajectoryDelta < 0) {
     const pointsLost = Math.round((a.trajectory[0] - a.trajectory[11]) * 10) / 10;
-    const sessionsLost = Math.round(pointsLost * 140);
-    const dollars = Math.round(sessionsLost * cvr * dealValue);
+    const sessionsPerPoint = Math.max(Math.round(revenue.organicSessions / Math.max(a.visibilityIndex, 6)), 1);
+    const sessionsLost = Math.round(pointsLost * sessionsPerPoint);
+    const dollars = Math.round(sessionsLost * perSession);
     findings.push({
       kind: "competitor",
       code: "sov_decline",
       label: `Share of voice ceded over 12 months`,
       severity: severity(dollars),
       monthlyDollars: dollars,
-      basis: `visibility ${a.trajectory[0]} → ${a.trajectory[11]} (${a.trajectoryDelta}%) = ${pointsLost} points × 140 sessions/point × ${revenue.conversionRate}% × $${dealValue.toLocaleString()} = $${dollars.toLocaleString()}/mo`,
+      basis: `visibility ${a.trajectory[0]} → ${a.trajectory[11]} (${a.trajectoryDelta}%) = ${pointsLost} points × ${sessionsPerPoint.toLocaleString()} sessions/point × $${perSession.toFixed(2)} per session = $${dollars.toLocaleString()}/mo`,
       evidence: `${leader.name} moved ${leader.momentum > 0 ? "+" : ""}${leader.momentum}% over the same window`,
     });
   }
 
   const clicksLost = a.weakPositions.reduce((sum, w) => sum + w.clicksLost, 0);
   if (clicksLost > 0) {
-    const dollars = Math.round(clicksLost * cvr * dealValue);
+    const dollars = Math.round(clicksLost * perSession);
     findings.push({
       kind: "competitor",
       code: "keyword_gap",
       label: "Top clusters owned by a named competitor",
       severity: severity(dollars),
       monthlyDollars: dollars,
-      basis: `${clicksLost.toLocaleString()} clicks/mo lost across ${a.weakPositions.length} clusters where a competitor holds page one × ${revenue.conversionRate}% × $${dealValue.toLocaleString()} = $${dollars.toLocaleString()}/mo`,
+      basis: `${clicksLost.toLocaleString()} clicks/mo lost across ${a.weakPositions.length} clusters where a competitor holds page one × $${perSession.toFixed(2)} per session = $${dollars.toLocaleString()}/mo`,
       evidence: `worst: "${a.weakPositions[0].cluster}" — they sit ${a.weakPositions[0].prospectPosition}, ${a.weakPositions[0].bestCompetitor} sits ${a.weakPositions[0].competitorPosition}`,
     });
   }
@@ -132,14 +137,14 @@ export function detectLeakage(company: Company, a: Analysis): LeakageReport {
   const bleedPct = between(company.domain + ":bleed", 0.04, 0.19, 2);
   if (bleedPct > 0.06) {
     const diverted = Math.round(brandedVolume * bleedPct);
-    const dollars = Math.round(diverted * cvr * 1.6 * dealValue);
+    const dollars = Math.round(diverted * perSession * 1.6);
     findings.push({
       kind: "competitor",
       code: "branded_bleed",
       label: "Competitors intercepting branded search",
       severity: severity(dollars),
       monthlyDollars: dollars,
-      basis: `${brandedVolume.toLocaleString()} branded searches/mo × ${(bleedPct * 100).toFixed(0)}% diverted to competitor listings × ${revenue.conversionRate}% × 1.6 branded intent multiplier × $${dealValue.toLocaleString()} = $${dollars.toLocaleString()}/mo`,
+      basis: `${brandedVolume.toLocaleString()} branded searches/mo × ${(bleedPct * 100).toFixed(0)}% diverted to competitor listings = ${diverted.toLocaleString()} sessions × $${perSession.toFixed(2)} × 1.6 branded intent multiplier = $${dollars.toLocaleString()}/mo`,
       evidence: `${a.competitors.slice(0, 2).map((c) => c.name).join(" and ")} rank on "${company.name.split(" ")[0]}" modifiers`,
     });
   }

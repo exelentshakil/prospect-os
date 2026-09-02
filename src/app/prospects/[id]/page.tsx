@@ -208,9 +208,11 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
                 <dl className="mt-2 space-y-1 text-[13px]">
                   {[
                     ["Organic sessions", a.revenue.organicSessions.toLocaleString() + "/mo"],
-                    ["Conversion rate", `${a.revenue.conversionRate}%`],
+                    ["Visitor to lead", `${a.revenue.conversionRate}%`],
+                    ["Lead to customer", `${(a.revenue.closeRate * 100).toFixed(0)}%`],
                     ["Avg deal", money(a.revenue.avgDealValue)],
-                    ["Attributed", money(a.revenue.attributedMonthly) + "/mo"],
+                    ["Value per session", `$${a.revenue.revenuePerSession.toFixed(2)}`],
+                    ["Attributed", `${money(a.revenue.attributedMonthly)}/mo · ${a.revenue.organicShare}% of revenue`],
                     ["Leader attributed", money(a.revenue.competitorAttributedMonthly) + "/mo"],
                   ].map(([k, v]) => (
                     <div key={k} className="flex justify-between">

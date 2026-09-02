@@ -56,7 +56,10 @@ export interface SeoPerformance {
 export interface RevenueAttribution {
   organicSessions: number;
   conversionRate: number;
+  closeRate: number;
   avgDealValue: number;
+  revenuePerSession: number;
+  organicShare: number;
   attributedMonthly: number;
   competitorAttributedMonthly: number;
   gapMonthly: number;
