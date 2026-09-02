@@ -232,22 +232,35 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
 
           <section className="card p-5">
             <SectionTitle
-              hint={`${money(leakage.conversionMonthly)} conversion · ${money(leakage.competitorMonthly)} competitor`}
+              hint={`${money(leakage.conversionMonthly)} conversion · ${money(leakage.competitorMonthly)} competitor · ${Math.round(
+                (leakage.totalMonthly / Math.max(a.revenue.attributedMonthly, 1)) * 100
+              )}% of attributed`}
             >
               Leakage findings
             </SectionTitle>
             <div className="space-y-2">
               {leakage.findings.map((f) => (
-                <div key={f.code} className="rounded-xl border border-border p-3.5">
+                <div
+                  key={f.code}
+                  className={`rounded-xl border p-3.5 ${f.counted ? "border-border" : "border-dashed border-border"}`}
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={f.kind === "competitor" ? "bad" : "warn"}>{f.kind}</Badge>
                     <span className="text-[13px] font-semibold">{f.label}</span>
-                    <span className="ml-auto text-[15px] font-semibold text-bad tnum">
+                    {!f.counted ? <Badge tone="neutral">not counted</Badge> : null}
+                    <span
+                      className={`ml-auto text-[15px] font-semibold tnum ${
+                        f.counted ? "text-bad" : "text-faint line-through"
+                      }`}
+                    >
                       {money(f.monthlyDollars)}/mo
                     </span>
                   </div>
                   <p className="mt-2 text-xs leading-relaxed text-muted">{f.basis}</p>
                   <p className="mt-1 text-[11px] text-faint">evidence · {f.evidence}</p>
+                  {f.overlapNote ? (
+                    <p className="mt-1.5 text-[11px] italic text-faint">{f.overlapNote}</p>
+                  ) : null}
                 </div>
               ))}
             </div>

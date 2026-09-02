@@ -88,6 +88,11 @@ export interface LeakageFinding {
   monthlyDollars: number;
   basis: string;
   evidence: string;
+  // False when a finding is a subset of a larger one already counted. It stays
+  // visible because it is the more specific, more sellable version of the
+  // story, but it is excluded from the total so nothing is counted twice.
+  counted: boolean;
+  overlapNote?: string;
 }
 
 export interface LeakageReport {
