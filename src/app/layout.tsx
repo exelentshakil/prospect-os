@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { ThemeProvider } from "@/components/theme-provider";
-import { TrafficTracker } from "@/components/traffic-tracker";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -19,7 +18,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className="font-sans antialiased">
         <ThemeProvider>
-          <TrafficTracker />
+          {/* traffic hub pixel -- see exelentshakil/demo-traffic */}
+          <img
+            src="https://demo-traffic.vercel.app/api/px?p=prospect-os"
+            alt=""
+            width={1}
+            height={1}
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+          />
           <Nav />
           <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
           <Footer />
